@@ -1,4 +1,11 @@
-import type { ReactNode } from "react";
+"use client";
+
+import type {
+  CSSProperties,
+  PointerEvent,
+  ReactNode,
+  Ref,
+} from "react";
 
 /** Available per-window title bar color variants. */
 export type TitlebarVariant =
@@ -11,15 +18,28 @@ export type TitlebarVariant =
   | "magenta";
 
 interface WindowFrameProps {
-  id?: string;
+  id: string;
   title: string;
   icon?: string;
   menuBar?: boolean;
   statusBar?: string;
-  children: ReactNode;
-  className?: string;
-  /** Gradient color variant for the window's title bar. Defaults to "pink". */
   titlebarVariant?: TitlebarVariant;
+  active?: boolean;
+  maximized?: boolean;
+  hidden?: boolean;
+  draggable?: boolean;
+  style?: CSSProperties;
+  className?: string;
+  frameRef?: Ref<HTMLElement>;
+  onFocus?: () => void;
+  onClose?: () => void;
+  onMinimize?: () => void;
+  onMaximize?: () => void;
+  onTitlebarPointerDown?: (event: PointerEvent<HTMLDivElement>) => void;
+  onTitlebarPointerMove?: (event: PointerEvent<HTMLDivElement>) => void;
+  onTitlebarPointerUp?: (event: PointerEvent<HTMLDivElement>) => void;
+  onTitlebarDoubleClick?: () => void;
+  children: ReactNode;
 }
 
 /** Maps each variant to its CSS gradient declaration. */
@@ -39,79 +59,132 @@ export function WindowFrame({
   icon = "✿",
   menuBar = false,
   statusBar,
-  children,
-  className = "",
   titlebarVariant = "pink",
+  active = true,
+  maximized = false,
+  hidden = false,
+  draggable = true,
+  style,
+  className = "",
+  frameRef,
+  onFocus,
+  onClose,
+  onMinimize,
+  onMaximize,
+  onTitlebarPointerDown,
+  onTitlebarPointerMove,
+  onTitlebarPointerUp,
+  onTitlebarDoubleClick,
+  children,
 }: WindowFrameProps) {
-  const titlebarStyle = { background: TITLEBAR_GRADIENTS[titlebarVariant] };
+  const titlebarStyle = active
+    ? { background: TITLEBAR_GRADIENTS[titlebarVariant] }
+    : undefined;
+
   return (
     <section
-      id={id}
-      aria-label={title}
-      className={`windose-outset bg-surface rounded-xs overflow-hidden screentone-shadow-lg ${className}`}
+      ref={frameRef}
+      id={`window-${id}`}
+      aria-labelledby={`window-${id}-title`}
+      tabIndex={-1}
+      hidden={hidden}
+      data-window-frame
+      data-maximized={maximized}
+      data-active={active}
+      style={style}
+      onPointerDown={() => onFocus?.()}
+      className={`os-window windose-outset bg-surface rounded-xs overflow-hidden screentone-shadow-lg ${className}`}
     >
       {/* Retro Title Bar */}
       <div
-        className="px-3 py-1.5 flex items-center justify-between select-none text-white"
+        className={`os-window-titlebar px-3 py-1.5 flex items-center justify-between select-none text-white ${
+          active ? "" : "windose-titlebar-inactive"
+        } ${draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default"}`}
         style={titlebarStyle}
+        onPointerDown={onTitlebarPointerDown}
+        onPointerMove={onTitlebarPointerMove}
+        onPointerUp={onTitlebarPointerUp}
+        onPointerCancel={onTitlebarPointerUp}
+        onDoubleClick={onTitlebarDoubleClick}
       >
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-sm shrink-0" aria-hidden="true">
             {icon}
           </span>
-          <h2 className="font-sans font-bold text-xs sm:text-sm tracking-wide text-white truncate drop-shadow-xs">
+          <h2
+            id={`window-${id}-title`}
+            className="font-sans font-bold text-xs sm:text-sm tracking-wide text-white truncate drop-shadow-xs"
+          >
             {title}
           </h2>
         </div>
 
         {/* Pixel Control Buttons (_ □ ✕) */}
-        <div className="flex items-center gap-1 shrink-0 ml-2">
+        <div
+          className="flex items-center gap-1 shrink-0 ml-2"
+          onPointerDown={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+        >
           <button
             type="button"
             aria-label="Minimize window"
-            className="w-5 h-5 windose-btn text-foreground font-mono font-bold text-xs flex items-center justify-center leading-none hover:bg-surface-light focus-visible:outline-none"
+            onClick={onMinimize}
+            className="flex h-6 w-6 items-center justify-center windose-btn font-mono text-sm font-bold leading-none text-foreground hover:bg-surface-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:h-5 sm:w-5 sm:text-xs"
           >
             _
           </button>
           <button
             type="button"
-            aria-label="Maximize window"
-            className="w-5 h-5 windose-btn text-foreground font-mono font-bold text-xs flex items-center justify-center leading-none hover:bg-surface-light focus-visible:outline-none"
+            aria-label={maximized ? "Restore window" : "Maximize window"}
+            aria-pressed={maximized}
+            onClick={onMaximize}
+            className="hidden h-6 w-6 items-center justify-center windose-btn font-mono text-sm font-bold leading-none text-foreground hover:bg-surface-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:h-5 sm:w-5 sm:text-xs lg:flex"
           >
             □
           </button>
           <button
             type="button"
             aria-label="Close window"
-            className="w-5 h-5 windose-btn text-foreground font-mono font-bold text-xs flex items-center justify-center leading-none hover:bg-accent hover:text-white focus-visible:outline-none"
+            onClick={onClose}
+            className="flex h-6 w-6 items-center justify-center windose-btn font-mono text-sm font-bold leading-none text-foreground hover:bg-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:h-5 sm:w-5 sm:text-xs"
           >
             ✕
           </button>
         </div>
       </div>
 
-      {/* Retro Menu Bar (File, Edit, View, Help) */}
+      {/* Retro Menu Bar (decorative) */}
       {menuBar && (
-        <div className="px-3 py-1 bg-surface border-b border-border text-xs font-sans text-foreground flex items-center gap-4 select-none">
-          <span className="hover:underline cursor-pointer">File</span>
-          <span className="hover:underline cursor-pointer">Edit</span>
-          <span className="hover:underline cursor-pointer">View</span>
-          <span className="hover:underline cursor-pointer">Palette</span>
-          <span className="hover:underline cursor-pointer">Help</span>
+        <div
+          aria-hidden="true"
+          className="px-3 py-1 bg-surface border-b border-border text-xs font-sans text-foreground flex items-center gap-4 select-none"
+        >
+          <span>File</span>
+          <span>Edit</span>
+          <span>View</span>
+          <span>Palette</span>
+          <span>Help</span>
         </div>
       )}
 
       {/* Window Body Canvas */}
-      <div className="p-4 sm:p-6 bg-background windose-inset m-1.5">{children}</div>
+      <div className="flex-1 min-h-0 overflow-y-auto bg-background screentone-subtle windose-inset m-1.5 p-4 sm:p-6">
+        {children}
+      </div>
 
       {/* Retro Status Bar */}
       {statusBar && (
         <div className="px-3 py-1 bg-surface text-[11px] font-sans text-muted flex items-center justify-between border-t border-border select-none">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-accent" aria-hidden="true" />
-            <span className="retro-cursor">{statusBar}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className="w-2 h-2 shrink-0 rounded-full bg-accent"
+              aria-hidden="true"
+            />
+            <span className="retro-cursor truncate">{statusBar}</span>
           </div>
-          <span className="font-mono text-[10px] text-muted">WINDOSE 98 SE</span>
+          <span className="font-mono text-[10px] text-muted shrink-0 ml-2">
+            WINDOSE 98 SE
+          </span>
         </div>
       )}
     </section>

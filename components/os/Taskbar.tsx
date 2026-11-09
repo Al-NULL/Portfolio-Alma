@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useDesktop } from "./DesktopContext";
 
 /** Formats a Date into a locale-aware HH:MM:SS string using Spanish locale. */
 function formatTime(date: Date): string {
@@ -12,7 +13,18 @@ function formatTime(date: Date): string {
 }
 
 export function Taskbar() {
+  const {
+    windows,
+    windowStates,
+    activeWindowId,
+    openWindow,
+    toggleWindowFromTaskbar,
+  } = useDesktop();
+
   const [startOpen, setStartOpen] = useState(false);
+  const startButtonRef = useRef<HTMLButtonElement>(null);
+  const startMenuRef = useRef<HTMLDivElement>(null);
+  const firstMenuItemRef = useRef<HTMLButtonElement>(null);
 
   /* Live clock — initialised server-safe (empty string), then hydrated.
    * We use an empty string as the SSR default to avoid hydration mismatches,
@@ -29,133 +41,184 @@ export function Taskbar() {
     return () => clearInterval(interval);
   }, []);
 
+  // Close the Start menu on outside click or Escape.
+  useEffect(() => {
+    if (!startOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+
+      if (
+        startMenuRef.current?.contains(target) ||
+        startButtonRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setStartOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+
+      setStartOpen(false);
+      startButtonRef.current?.focus();
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [startOpen]);
+
+  // Move keyboard focus into the menu when it opens.
+  useEffect(() => {
+    if (startOpen) {
+      firstMenuItemRef.current?.focus();
+    }
+  }, [startOpen]);
+
+  const openWindows = windows.filter(
+    (definition) => windowStates[definition.id]?.open,
+  );
+
   return (
     <>
       {/* Start Menu Pop-up Window */}
       {startOpen && (
         <div
-          role="menu"
-          aria-label="Start Menu"
-          className="fixed bottom-11 left-2 z-50 w-64 windose-outset bg-surface shadow-2xl p-1.5 space-y-1.5 animate-fade-in"
+          ref={startMenuRef}
+          id="start-menu"
+          role="group"
+          aria-label="Start menu"
+          className="absolute bottom-full left-0 z-50 mb-1 max-h-[calc(100dvh-4rem)] w-72 max-w-[calc(100vw-1rem)] overflow-y-auto windose-outset bg-surface p-1.5 shadow-2xl"
         >
-          {/* Vertical Pink Title Strip */}
           <div className="flex gap-2">
-            <div className="w-8 windose-titlebar flex items-end justify-center py-4 rounded-xs">
-              <span className="font-serif font-bold text-xs tracking-widest text-white -rotate-90 whitespace-nowrap">
+            {/* Vertical Pink Title Strip */}
+            <div className="w-8 windose-titlebar flex items-end justify-center rounded-xs py-4">
+              <span className="whitespace-nowrap font-serif text-xs font-bold tracking-widest text-white -rotate-90">
                 WINDOSE 98
               </span>
             </div>
 
-            {/* Menu Links */}
-            <div className="flex-1 space-y-1 text-xs font-sans text-foreground">
-              <a
-                href="#works"
-                onClick={() => setStartOpen(false)}
-                className="flex items-center gap-2.5 p-2 rounded-xs hover:bg-accent hover:text-white transition-colors"
-              >
-                <span>🖼️</span>
-                <span className="font-semibold">Creations Gallery</span>
-              </a>
-              <a
-                href="#demo"
-                onClick={() => setStartOpen(false)}
-                className="flex items-center gap-2.5 p-2 rounded-xs hover:bg-accent hover:text-white transition-colors"
-              >
-                <span>🎮</span>
-                <span className="font-semibold">VN Sprite Switcher</span>
-              </a>
-              <a
-                href="#krita"
-                onClick={() => setStartOpen(false)}
-                className="flex items-center gap-2.5 p-2 rounded-xs hover:bg-accent hover:text-white transition-colors"
-              >
-                <span>🎨</span>
-                <span className="font-semibold">Krita Studio Palette</span>
-              </a>
-              <a
-                href="#about"
-                onClick={() => setStartOpen(false)}
-                className="flex items-center gap-2.5 p-2 rounded-xs hover:bg-accent hover:text-white transition-colors"
-              >
-                <span>📝</span>
-                <span className="font-semibold">About Alma & Studies</span>
-              </a>
-              <a
-                href="#contact"
-                onClick={() => setStartOpen(false)}
-                className="flex items-center gap-2.5 p-2 rounded-xs hover:bg-accent hover:text-white transition-colors border-t border-border pt-2"
-              >
-                <span>✉️</span>
-                <span className="font-bold text-accent hover:text-white">Contact & Commissions</span>
-              </a>
+            <div role="group" aria-label="Programs" className="min-w-0 flex-1">
+              <p className="px-2 pb-1 pt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">
+                Programs
+              </p>
+              <ul className="m-0 list-none space-y-1 p-0 text-xs font-sans text-foreground">
+                {windows.map((definition, index) => {
+                  const isOpen = windowStates[definition.id]?.open;
+
+                  return (
+                    <li key={definition.id}>
+                      <button
+                        ref={index === 0 ? firstMenuItemRef : undefined}
+                        type="button"
+                        onClick={() => {
+                          openWindow(definition.id);
+                          setStartOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-xs p-2 text-left transition-colors hover:bg-accent hover:text-white focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none"
+                      >
+                        <span className="shrink-0" aria-hidden="true">
+                          {definition.icon}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate font-semibold">
+                          {definition.label}
+                        </span>
+                        {isOpen && (
+                          <span className="shrink-0 rounded-full border border-border bg-background px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase text-accent">
+                            open
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           </div>
+
+          <p className="mt-1.5 border-t border-border px-2 py-1.5 text-[10px] font-mono text-muted">
+            Alma Studio • Barcelona, Spain
+          </p>
         </div>
       )}
 
       {/* Main Bottom Retro Taskbar */}
       <aside
         role="region"
-        aria-label="Desktop Taskbar"
-        className="fixed bottom-0 inset-x-0 z-40 h-10 bg-surface border-t-2 border-white flex items-center justify-between px-2 shadow-lg select-none"
+        aria-label="Desktop taskbar"
+        className="relative z-30 flex h-10 shrink-0 select-none items-center justify-between gap-2 border-t-2 border-white bg-surface px-2 shadow-lg"
       >
-        {/* Start Button & Active Window Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          {/* Start Button */}
+        {/* Start Button & Running Window Tabs */}
+        <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto">
           <button
+            ref={startButtonRef}
             type="button"
-            onClick={() => setStartOpen(!startOpen)}
+            data-taskbar-start
+            onClick={() => setStartOpen((current) => !current)}
             aria-expanded={startOpen}
-            className={`px-3 py-1 windose-btn flex items-center gap-1.5 font-bold text-xs font-sans shrink-0 ${
+            aria-controls="start-menu"
+            className={`flex shrink-0 items-center gap-1.5 px-3 py-1 windose-btn text-xs font-bold font-sans ${
               startOpen ? "windose-inset bg-accent-soft" : ""
             }`}
           >
-            <span className="text-accent text-sm" aria-hidden="true">
+            <span className="text-sm text-accent" aria-hidden="true">
               ✿
             </span>
             <span>Start</span>
           </button>
 
-          {/* Quick-Nav Window Tabs */}
-          <a
-            href="#works"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 windose-btn text-xs font-medium text-foreground hover:bg-surface-light shrink-0 truncate max-w-[140px]"
-          >
-            <span aria-hidden="true">🖼️</span>
-            <span>Creations</span>
-          </a>
+          {openWindows.map((definition) => {
+            const state = windowStates[definition.id];
+            const isActive =
+              activeWindowId === definition.id && !state.minimized;
 
-          <a
-            href="#demo"
-            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 windose-btn text-xs font-medium text-foreground hover:bg-surface-light shrink-0 truncate max-w-[140px]"
-          >
-            <span aria-hidden="true">🎮</span>
-            <span>VN_Demo</span>
-          </a>
-
-          <a
-            href="#about"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 windose-btn text-xs font-medium text-foreground hover:bg-surface-light shrink-0 truncate max-w-[140px]"
-          >
-            <span aria-hidden="true">📝</span>
-            <span>About.txt</span>
-          </a>
+            return (
+              <button
+                key={definition.id}
+                type="button"
+                data-taskbar-window={definition.id}
+                onClick={() => toggleWindowFromTaskbar(definition.id)}
+                aria-pressed={isActive}
+                aria-controls={`window-${definition.id}`}
+                title={definition.title}
+                className={`flex shrink-0 items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  isActive
+                    ? "windose-inset bg-accent-soft"
+                    : "windose-btn hover:bg-surface-light"
+                } ${state.minimized ? "opacity-60" : ""}`}
+              >
+                <span aria-hidden="true">{definition.icon}</span>
+                <span className="hidden max-w-[120px] truncate sm:inline">
+                  {definition.label}
+                </span>
+                {state.minimized && (
+                  <span className="sr-only">(minimized)</span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* System Tray & Retro Clock */}
-        <div className="flex items-center gap-2 pl-2 shrink-0">
-          <div className="flex items-center gap-1 px-2.5 py-1 windose-inset bg-background text-xs font-mono">
-            <span title="Visual Novel Lover" aria-label="Heart">
+        <div className="flex shrink-0 items-center gap-2 pl-2">
+          <div className="flex items-center gap-1 bg-background px-2.5 py-1 windose-inset text-xs font-mono">
+            <span className="hidden sm:inline" title="Visual Novel Lover">
               ♡
             </span>
-            <span title="Signal" aria-label="Signal">
+            <span className="hidden sm:inline" title="Signal">
               📶
             </span>
-            <span title="Sound Active" aria-label="Audio">
+            <span className="hidden sm:inline" title="Sound active">
               🔊
             </span>
             <span
-              className="ml-1 text-[11px] font-bold text-accent font-mono retro-cursor"
+              className="ml-0.5 font-mono text-[11px] font-bold text-accent retro-cursor sm:ml-1"
               aria-live="off"
               aria-label={`Current time: ${time}`}
             >

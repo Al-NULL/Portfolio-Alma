@@ -1,4 +1,5 @@
 import { profile } from "@/content/profile";
+import { OpenWindowButton } from "./OpenWindowButton";
 
 export function ChatMessenger() {
   return (
@@ -77,13 +78,14 @@ export function ChatMessenger() {
         <div className="flex-1 px-3 py-1.5 bg-background windose-inset rounded-xs text-xs text-muted font-sans select-none">
           Leave a message or commission request...
         </div>
-        <a
-          href="#contact"
+        <OpenWindowButton
+          windowId="contact"
+          ariaLabel="Open the contact window"
           className="px-4 py-1.5 windose-btn text-accent font-bold text-xs flex items-center gap-1 hover:bg-accent hover:text-white transition-colors"
         >
           <span>Send</span>
           <span aria-hidden="true">✉</span>
-        </a>
+        </OpenWindowButton>
       </div>
     </div>
   );

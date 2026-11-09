@@ -37,6 +37,7 @@ body {
   color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
 }
 
 /* Polka Dots & Halftone Screentone Wallpaper */
@@ -99,6 +100,62 @@ body {
   border-left: 2px solid var(--color-surface-dark);
   border-right: 2px solid var(--color-surface-light);
   border-bottom: 2px solid var(--color-surface-light);
+}
+
+/* ─── Desktop Window Manager ─────────────────────────────────────────────── */
+/* Windows are absolutely positioned inside the desktop workspace. On small    */
+/* screens they become a single full-workspace sheet instead of scaled floats. */
+
+.os-window {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100% - 1rem);
+  max-height: calc(100% - 1rem);
+}
+
+.os-window[hidden] {
+  display: none !important;
+}
+
+.os-window[data-maximized="true"] {
+  inset: 0.5rem !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* Reserve the left shortcut column when floating windows are available. */
+@media (min-width: 1024px) {
+  .os-window {
+    max-width: calc(100% - 14rem);
+  }
+}
+
+.os-window-titlebar {
+  touch-action: none;
+}
+
+.os-window:focus {
+  outline: none;
+}
+
+.os-window:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -3px;
+}
+
+@media (max-width: 1023px) {
+  .os-window {
+    inset: 0.5rem !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  .os-window-titlebar {
+    cursor: default;
+  }
 }
 
 /* Screentone Halftone Drop Shadows */

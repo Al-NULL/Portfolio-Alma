@@ -1,47 +1,66 @@
 import { artApproaches } from "@/content/profile";
 
-export function Principles() {
+interface PrinciplesProps {
+  /** Renders without the outer page-section spacing when placed inside a desktop window. */
+  embedded?: boolean;
+}
+
+export function Principles({ embedded = false }: PrinciplesProps) {
   return (
-    <section id="approach" aria-labelledby="approach-title" className="py-16 border-t-2 border-border-bold">
-      <div className="space-y-4 max-w-2xl">
-        <p className="text-xs uppercase tracking-widest text-accent font-bold flex items-center gap-1.5">
+    <section
+      aria-labelledby="approach-title"
+      className={embedded ? "space-y-8" : "border-t-2 border-border-bold py-16"}
+    >
+      <div className="max-w-2xl space-y-4">
+        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-accent">
           <span aria-hidden="true">✿</span>
-          <span>Artistic Technique & Philosophy</span>
+          <span>Artistic Technique &amp; Philosophy</span>
         </p>
-        <h2 id="approach-title" className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-          Cute, professional & steeped in visual storytelling.
-        </h2>
-        <p className="text-muted text-base sm:text-lg leading-relaxed">
-          Grounded in formal illustration training (CFGS in Barcelona) and a deep love for visual novels,
-          my artistic practice unites traditional draftsmanship with the tactile charm of polka dot screentones and Krita painting.
+        <h3
+          id="approach-title"
+          className={`font-serif text-3xl font-bold tracking-tight text-foreground sm:text-4xl ${
+            embedded ? "" : "md:text-5xl"
+          }`}
+        >
+          Cute, professional &amp; steeped in visual storytelling.
+        </h3>
+        <p className="text-base leading-relaxed text-muted sm:text-lg">
+          Grounded in formal illustration training (CFGS in Barcelona) and a
+          deep love for visual novels, my artistic practice unites traditional
+          draftsmanship with the tactile charm of polka dot screentones and
+          Krita painting.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
+      <div
+        className={`grid grid-cols-1 gap-8 md:grid-cols-2 ${
+          embedded ? "mt-8" : "mt-12"
+        }`}
+      >
         {artApproaches.map((approach) => (
           <article
             key={approach.number}
             aria-labelledby={`approach-${approach.number}-title`}
-            className="relative p-7 sm:p-8 bg-surface/80 border-2 border-border-bold rounded-2xl screentone-shadow space-y-4 overflow-hidden"
+            className="relative space-y-4 overflow-hidden rounded-2xl border-2 border-border-bold bg-surface/80 p-7 screentone-shadow sm:p-8"
           >
             {/* Highly Visible Screentone Halftone Polka Dots in the corner */}
             <div
-              className="absolute top-0 right-0 w-24 h-24 screentone-dense opacity-60 rounded-bl-3xl pointer-events-none"
+              className="absolute right-0 top-0 h-24 w-24 rounded-bl-3xl opacity-60 screentone-dense pointer-events-none"
               aria-hidden="true"
             />
 
-            <span className="inline-block font-serif text-xs font-bold text-accent tracking-widest bg-background px-3 py-1 rounded-full border border-border-bold shadow-2xs">
+            <span className="inline-block rounded-full border border-border-bold bg-background px-3 py-1 font-serif text-xs font-bold tracking-widest text-accent shadow-2xs">
               Approach {approach.number}
             </span>
 
-            <h3
+            <h4
               id={`approach-${approach.number}-title`}
               className="font-serif text-2xl font-bold text-foreground"
             >
               {approach.title}
-            </h3>
+            </h4>
 
-            <p className="text-sm sm:text-base text-muted leading-relaxed">
+            <p className="text-sm leading-relaxed text-muted sm:text-base">
               {approach.description}
             </p>
           </article>

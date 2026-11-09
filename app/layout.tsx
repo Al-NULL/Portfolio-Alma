@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Inter, Newsreader } from "next/font/google";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { SkipLink } from "@/components/layout/SkipLink";
 import "./globals.css";
 
@@ -49,13 +47,11 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable}`}>
-      <body className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-accent selection:text-background font-sans">
+      <body className="flex h-dvh flex-col overflow-hidden bg-background font-sans text-foreground antialiased selection:bg-accent selection:text-background">
         <SkipLink />
-        <Header />
-        <main id="main-content" className="flex-1">
+        <main id="main-content" className="min-h-0 flex-1">
           {children}
         </main>
-        <Footer />
       </body>
     </html>
   );
